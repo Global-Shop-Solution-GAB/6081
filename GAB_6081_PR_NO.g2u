@@ -1,0 +1,95 @@
+﻿Program.Sub.Preflight.Start
+Program.Sub.Preflight.End
+
+Program.Sub.Main.Start
+
+F.Intrinsic.Control.SetErrorHandler("Main_Err")
+F.Intrinsic.Control.ClearErrors
+
+V.Local.sError.Declare(String)
+V.Local.sReqNum.Declare(String)   
+V.Local.sReqLine.Declare(String)
+V.Local.sQuery.Declare(String)
+V.Local.sOriginatorPR.Declare(String)
+
+Function.Intrinsic.UI.UsePixels ' Allows you to use Pixels instead of Twips throughout
+
+V.Local.sReqNum.Set(V.Passed.000016)									'REQ_NUM   V.Passed.000016 from PO Line Screen
+F.Intrinsic.String.Format(V.Passed.000051,"000",V.Local.sReqLine)		'REQ_LINE  V.Passed.000051 from PO Line Screen
+
+F.ODBC.Connection!conx.OpenConnection(V.Ambient.PDSN,V.Ambient.PUser,V.Ambient.PPass)
+
+V.Local.sOriginatorPR.Set("")
+F.Intrinsic.String.Build("SELECT USER_ORIG FROM V_REQ_HIST WHERE REQ_NUM = '{0}' and REQ_LINE = '{1}'",V.Local.sReqNum,V.Local.sReqLine,V.Local.sQuery)
+F.ODBC.Connection!conx.OpenLocalRecordsetRO("rstReqHist",V.Local.sQuery)
+F.Intrinsic.Control.If(V.ODBC.conx!rstReqHist.EOF,=,False)
+	V.Local.sOriginatorPR.Set(V.ODBC.conx!rstReqHist.FieldValTrim!USER_ORIG)
+F.Intrinsic.Control.Else
+	F.Intrinsic.String.Build("SELECT USERID_ORIGINATOR FROM V_PURCHASE_REQS WHERE PO_REQ_NUMBER = '{0}' AND PO_REQ_LINE = '{1}'",V.Local.sReqNum,V.Local.sReqLine,V.Local.sQuery)
+	F.ODBC.Connection!conx.OpenLocalRecordsetRO("rstReq",V.Local.sQuery)
+	F.Intrinsic.Control.If(V.ODBC.conx!rstReq.EOF,=,False)
+		V.Local.sOriginatorPR.Set(V.ODBC.conx!rstReq.FieldValTrim!USERID_ORIGINATOR)
+	F.Intrinsic.Control.EndIf
+	F.ODBC.conx!rstReq.Close
+F.Intrinsic.Control.EndIf
+F.ODBC.conx!rstReqHist.Close
+
+'PR Originator Label
+F.Intrinsic.Variable.SetProperty("GAB-LBL-1","PL",800)
+F.Intrinsic.Variable.SetProperty("GAB-LBL-1","PT",50)
+F.Intrinsic.Variable.SetProperty("GAB-LBL-1","PW",80)
+F.Intrinsic.Variable.SetProperty("GAB-LBL-1","PH",15)
+V.Passed.GAB-LBL-1.Set("PR Originator")
+
+'PR Originator TextBox
+F.Intrinsic.Variable.SetProperty("GAB-TEXT-1","PL",800)
+F.Intrinsic.Variable.SetProperty("GAB-TEXT-1","PT",67)
+F.Intrinsic.Control.If(V.Caller.GSSVersion,<=,"2019.1")
+	F.Intrinsic.Variable.SetProperty("GAB-TEXT-1","PW",100)
+F.Intrinsic.Control.Else
+	F.Intrinsic.Variable.SetProperty("GAB-TEXT-1","PW",700)
+F.Intrinsic.Control.EndIf
+V.Passed.GAB-TEXT-1.Set(V.Local.sOriginatorPR)
+
+F.Intrinsic.Control.If(V.Local.sReqNum,<>,"","AND",V.Local.sReqLine,<>,"")
+	V.Passed.000097.Set("View PR")           'SCRIPT-1-BTN
+F.Intrinsic.Control.Else
+	F.Intrinsic.UI.ChangeCallerProperty(V.Passed.000097,"LOCK",1)
+F.Intrinsic.Control.EndIf
+
+F.Intrinsic.Control.CallSub(Unload)
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("Main_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GAB_6081_PR_NO.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+Function.Intrinsic.Control.EndIf
+
+Program.Sub.Main.End
+
+Program.Sub.Unload.Start
+
+F.Intrinsic.Control.SetErrorHandler("Unload_Err")
+F.Intrinsic.Control.ClearErrors
+
+V.Local.sError.Declare(String)
+
+F.ODBC.Connection!conx.Close
+F.Intrinsic.Control.End
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("Unload_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GAB_6081_PO_APPROVAL_REQ.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+Function.Intrinsic.Control.EndIf
+
+Program.Sub.Unload.End
+
+Program.Sub.Comments.Start
+${$5$}$3.0.0.0$}$1
+${$6$}$tdjohan$}$20210512115748387$}$8rAQhOSvlohpQhMDm1j544LwmwXnRbkh35AqiB2Bu3s2PzRJseUJ27Z+fCxifIr07MQ6qXMG0OU=
+Program.Sub.Comments.End
