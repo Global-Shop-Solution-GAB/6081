@@ -1,0 +1,94 @@
+﻿Program.Sub.Preflight.Start
+Program.Sub.Preflight.End
+
+Program.Sub.Main.Start
+F.Intrinsic.Control.SetErrorHandler("Main_Err")
+F.Intrinsic.Control.ClearErrors
+
+V.Local.sError.Declare(String)
+
+Function.Intrinsic.UI.UsePixels ' Allows you to use Pixels instead of Twips throughout
+
+F.Intrinsic.Control.SelectCase(V.Caller.Hook)
+	F.Intrinsic.Control.Case(16190)			'PO Line Detail Screen
+		F.Intrinsic.Control.CallSub(Hook16190)
+F.Intrinsic.Control.EndSelect
+
+F.Intrinsic.Control.CallSub(Unload)
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("Main_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GAB_6081_PR_PRE_PROCESS.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+Function.Intrinsic.Control.EndIf
+
+Program.Sub.Main.End
+
+Program.Sub.Unload.Start
+
+F.Intrinsic.Control.SetErrorHandler("Unload_Err")
+F.Intrinsic.Control.ClearErrors
+
+V.Local.sError.Declare(String)
+
+F.Intrinsic.Control.End
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("Unload_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GAB_6081_PR_PRE_PROCESS.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+Function.Intrinsic.Control.EndIf
+
+Program.Sub.Unload.End
+
+
+Program.Sub.Hook16190.Start
+
+F.Intrinsic.Control.SetErrorHandler("Hook16190_Err")
+F.Intrinsic.Control.ClearErrors
+
+V.Local.sError.Declare(String)
+V.Local.sFile.Declare(String)
+V.Local.sFileName.Declare(String)
+V.Local.sTemp.Declare(String)
+V.Local.bFileExists.Declare(Boolean)
+V.Local.iCnt.Declare(Long)
+V.Local.sReqNum.Declare(String)
+V.Local.sReqLine.Declare(String)
+
+F.Intrinsic.String.Concat(V.System.Temp,"\GSS\GAB_6081_",V.Caller.User,"_",V.Caller.Terminal,".txt",V.Local.sFileName)
+Function.Intrinsic.File.Exists(V.Local.sFileName,V.Local.bFileExists)
+F.Intrinsic.Control.If(V.Local.bFileExists)
+	F.Intrinsic.File.File2String(V.Local.sFileName,V.Local.sFile)
+	F.Intrinsic.String.Split(V.Local.sFile,V.Ambient.NewLine,V.Local.sFile)
+	F.Intrinsic.Control.For(V.Local.iCnt,0,V.Local.sFile.UBound,1)
+		F.Intrinsic.String.Split(V.Local.sFile(V.Local.iCnt).Trim,"*!*",V.Local.sTemp)
+		V.Local.sReqNum.Set(V.Local.sTemp(0))
+		V.Local.sReqLine.Set(V.Local.sTemp(1))
+	F.Intrinsic.Control.Next(V.Local.iCnt)
+	F.Intrinsic.File.DeleteFile(V.Local.sFileName)
+F.Intrinsic.Control.EndIf
+
+F.Intrinsic.Control.If(V.Local.sReqNum,<>,"","AND",V.Local.sReqLine,<>,"")
+	V.Passed.000003.Set(V.Local.sReqNum)			'Requisition No in PR View History Screen
+	V.Passed.000001.Set(V.Local.sReqLine)           'Requisition Line in PR View History Screen
+F.Intrinsic.Control.EndIf
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("Hook16190_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GAB_6081_PR_PRE_PROCESS.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+Function.Intrinsic.Control.EndIf
+
+Program.Sub.Hook16190.End
+
+Program.Sub.Comments.Start
+${$5$}$3.0.0.0$}$1
+${$6$}$tdjohan$}$20200903094654861$}$8rAQhOSvlohpQhMDm1j544LwmwXnRbkhjDhFkKDofa9iaJAebBpPTeNkHfatZkqZlmqsr5qsiXM=
+Program.Sub.Comments.End
