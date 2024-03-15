@@ -1,0 +1,150 @@
+﻿Program.Sub.Preflight.Start
+V.Global.bViewPR.Declare(Boolean)
+V.Global.iViewReqHistMenuSelID.Declare(Long)
+V.Global.iViewReqMenuSelID.Declare(Long)
+Program.Sub.Preflight.End
+
+Program.Sub.Main.Start
+
+F.Intrinsic.Control.SetErrorHandler("Main_Err")
+F.Intrinsic.Control.ClearErrors
+
+V.Local.sError.Declare(String)
+V.Local.sReqNum.Declare(String)   
+V.Local.sReqLine.Declare(String)
+V.Local.sMessage.Declare(String)
+V.Local.iReturn.Declare(Long)
+V.Local.sSQL.Declare(String)
+V.Local.iTaskID.Declare(Long)
+V.Local.bValidRequisition.Declare(Boolean)
+
+Function.Intrinsic.UI.UsePixels ' Allows you to use Pixels instead of Twips throughout
+
+F.ODBC.Connection!conx.OpenConnection(V.Ambient.PDSN,V.Ambient.PUser,V.Ambient.PPass)
+
+V.Global.iViewReqMenuSelID.Set(272)		' 272 = Purchasing > View > Purchase Requisition 
+V.Global.iViewReqHistMenuSelID.Set(274)		' 274 = Purchasing > View > Purchase Requisition History
+
+V.Local.sReqNum.Set(V.Passed.000016)									'REQ_NUM   V.Passed.000016 from PO Line Screen
+F.Intrinsic.String.Format(V.Passed.000051,"000",V.Local.sReqLine)		'REQ_LINE  V.Passed.000051 from PO Line Screen
+
+'Check whether the Requisition is valid and exists in V_REQ_HIST
+V.Local.bValidRequisition.Set(False)
+F.Intrinsic.String.Build("SELECT * FROM V_REQ_HIST WHERE REQ_NUM = '{0}' AND REQ_LINE = '{1}'",V.Local.sReqNum,V.Local.sReqLine,V.Local.sSQL)
+F.ODBC.Connection!conx.OpenRecordsetRO("rstReqHist",V.Local.sSQL)
+F.Intrinsic.Control.If(V.ODBC.conx!rstReqHist.EOF,=,False)
+	V.Local.iTaskID.Set(V.Global.iViewReqHistMenuSelID)
+	V.Local.bValidRequisition.Set(True)
+F.Intrinsic.Control.Else
+	'Check whether the Requisition is valid and exists in V_PURCHASE_REQS
+	F.Intrinsic.String.Build("SELECT * FROM V_PURCHASE_REQS WHERE PO_REQ_NUMBER = '{0}' AND PO_REQ_LINE = '{1}'",V.Local.sReqNum,V.Local.sReqLine,V.Local.sSQL)
+	F.ODBC.Connection!conx.OpenRecordsetRO("rstReq",V.Local.sSQL)
+	F.Intrinsic.Control.If(V.ODBC.conx!rstReq.EOF,=,False)
+		V.Local.iTaskID.Set(V.Global.iViewReqMenuSelID)
+		V.Local.bValidRequisition.Set(True)
+	F.Intrinsic.Control.EndIf
+	F.ODBC.conx!rstReq.Close
+F.Intrinsic.Control.EndIf
+F.ODBC.conx!rstReqHist.Close
+
+F.Intrinsic.Control.CallSub(CheckPermissions,"iTaskID",V.Local.iTaskID)
+
+F.Intrinsic.Control.If(V.Global.bViewPR)
+	F.Intrinsic.Control.If(V.Local.bValidRequisition)
+		F.Intrinsic.Control.CallSub(WriteReqNumToFile,"sReqNum",V.Local.sReqNum,"sReqLine",V.Local.sReqLine)
+		F.Global.General.LaunchMenuTask(V.Local.iTaskID, V.Local.iReturn)    
+	F.Intrinsic.Control.Else
+		F.Intrinsic.UI.Msgbox("The Requisition No is invalid")
+	F.Intrinsic.Control.EndIf
+F.Intrinsic.Control.Else
+	F.Intrinsic.String.Build("You don't have access to PR History View.{0}Please set it up in System Support > File > User Security Maintenance",V.Ambient.NewLine,V.Local.sMessage)
+	F.Intrinsic.UI.Msgbox(V.Local.sMessage)
+F.Intrinsic.Control.EndIf
+
+F.Intrinsic.Control.CallSub(Unload)
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("Main_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GAB_6081_PR_VIEW.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+Function.Intrinsic.Control.EndIf
+
+Program.Sub.Main.End
+
+Program.Sub.Unload.Start
+
+F.Intrinsic.Control.SetErrorHandler("Unload_Err")
+F.Intrinsic.Control.ClearErrors
+
+V.Local.sError.Declare(String)
+
+F.ODBC.Connection!conx.Close
+F.Intrinsic.Control.End
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("Unload_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GAB_6081_PR_VIEW.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+Function.Intrinsic.Control.EndIf
+
+Program.Sub.Unload.End
+
+Program.Sub.CheckPermissions.Start
+
+F.Intrinsic.Control.SetErrorHandler("CheckPermissions_Err")
+F.Intrinsic.Control.ClearErrors
+
+V.Local.sError.Declare(String)
+	
+'Check if the User has permission to view Purchase Requisition
+F.Global.Security.CheckUserAccessIPM(V.Args.iTaskID,V.Global.bViewPR)    
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("CheckPermissions_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GAB_6081_PR_VIEW.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+Function.Intrinsic.Control.EndIf
+
+Program.Sub.CheckPermissions.End
+
+Program.Sub.WriteReqNumToFile.Start
+
+F.Intrinsic.Control.SetErrorHandler("WriteReqNumToFile_Err")
+F.Intrinsic.Control.ClearErrors
+
+V.Local.sError.Declare(String)
+V.Local.sFile.Declare(String)
+V.Local.sFileName.Declare(String)
+V.Local.bFileExists.Declare(Boolean)
+
+F.Intrinsic.String.Concat(V.System.Temp,"\GSS\GAB_6081_",V.Caller.User,"_",V.Caller.Terminal,".txt",V.Local.sFileName)
+Function.Intrinsic.File.Exists(V.Local.sFileName,V.Local.bFileExists)
+F.Intrinsic.Control.If(V.Local.bFileExists)
+	F.Intrinsic.File.DeleteFile(V.Local.sFileName)
+F.Intrinsic.Control.EndIf
+
+V.Local.sFile.Set("")
+F.Intrinsic.String.Concat(V.Args.sReqNum,"*!*",V.Args.sReqLine,V.Local.sFile)
+
+F.Intrinsic.File.String2File(V.Local.sFileName,V.Local.sFile)
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("WriteReqNumToFile_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GAB_6081_PR_VIEW.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+Function.Intrinsic.Control.EndIf
+
+Program.Sub.WriteReqNumToFile.End
+
+Program.Sub.Comments.Start
+${$5$}$3.0.0.0$}$1
+${$6$}$tdjohan$}$20200903095807352$}$8rAQhOSvlohpQhMDm1j544LwmwXnRbkhjDhFkKDofa9iaJAebBpPTRSoi+zz8DuTd+ZKGMaev+0=
+Program.Sub.Comments.End
